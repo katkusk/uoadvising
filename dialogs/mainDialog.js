@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
-const { MessageFactory, InputHints } = require('botbuilder');
+const { CardFactory, InputHints } = require('botbuilder');
 const { LuisRecognizer } = require('botbuilder-ai');
 const { ComponentDialog, DialogSet, DialogTurnStatus, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
 
@@ -59,9 +59,12 @@ class MainDialog extends ComponentDialog {
             return await stepContext.next();
         }
 
-        const messageText = stepContext.options.restartMsg ? stepContext.options.restartMsg : 'What can I help you with today?\nSay something like "Book a flight from Paris to Berlin on March 22, 2020"';
-        const promptMessage = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
-        return await stepContext.prompt('TextPrompt', { prompt: promptMessage });
+        const welcomeCard = CardFactory.heroCard(
+            'Welcome to the Advising Helpdesk. How can we be of support?',
+            [],
+            ['Schedule an Appointment', 'Ask a Registration Question']
+        );
+        await stepContext.context.sendActivity({ attachments: [welcomeCard] });
     }
 
     /**
