@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
-const { InputHints, MessageFactory } = require('botbuilder');
+const { InputHints, MessageFactory, CardFactory } = require('botbuilder');
 const { ConfirmPrompt, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
 const { CancelAndHelpDialog } = require('./cancelAndHelpDialog');
 const { DateResolverDialog } = require('./dateResolverDialog');
@@ -37,7 +37,13 @@ class BookingDialog extends CancelAndHelpDialog {
         const bookingDetails = stepContext.options;
 
         if (!bookingDetails.destination) {
-            const messageText = 'To what city would you like to travel?';
+            const welcomeCard = CardFactory.heroCard(
+                'Welcome to the Advising Helpdesk. How can we be of support?',
+                [],
+                ['Schedule an Appointment', 'Ask a Registration Question']
+            );
+            await stepContext.sendActivity({ attachments: [welcomeCard] });
+            const messageText = 'To what place would you like to travel?';
             const msg = MessageFactory.text(messageText, messageText, InputHints.ExpectingInput);
             return await stepContext.prompt(TEXT_PROMPT, { prompt: msg });
         }
