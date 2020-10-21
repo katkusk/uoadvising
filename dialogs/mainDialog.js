@@ -72,8 +72,9 @@ class MainDialog extends ComponentDialog {
      */
     async actStep(stepContext) {
         const jsonResponse = JSON.parse(stepContext.result);
-        const studentQuestion = jsonResponse.StudentQuestion;
-        await stepContext.context.sendActivity(`You said ${ studentQuestion }`);
+        const studentQ = jsonResponse.StudentFirst;
+        console.log(studentQ);
+        await stepContext.context.sendActivity(`You said ${ studentQ }`);
         return await stepContext.prompt(NAME_PROMPT, 'Please enter your name.');
     }
 

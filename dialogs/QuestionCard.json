@@ -63,9 +63,9 @@
             "data": {
               "msteams": {
                   "type": "messageBack",
-                  "displayText": "[Question Text]",
-                  "text": "messageBackRegQuestion",
-                  "value": "{\"studentFirst\": \"StudentFirst\"studentQuestion\": \"StudentQuestion\", \"studentPhone\": \"StudentPhone\"}"
+                  "displayText": "",
+                  "text": "",
+                  "value": "{\"studentFirst\": \"StudentFirst\", \"studentQuestion\": \"StudentQuestion\", \"studentPhone\": \"StudentPhone\"}"
               }
             }
           },
