@@ -3,8 +3,13 @@
 
 const { TimexProperty } = require('@microsoft/recognizers-text-data-types-timex-expression');
 const { CardFactory, InputHints } = require('botbuilder');
-const { LuisRecognizer } = require('botbuilder-ai');
-const { ComponentDialog, DialogSet, DialogTurnStatus, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
+const { ChoicePrompt, ComponentDialog, DialogSet, DialogTurnStatus, TextPrompt, WaterfallDialog } = require('botbuilder-dialogs');
+
+const CHOICE_PROMPT = 'CHOICE_PROMPT';
+const NAME_PROMPT = 'NAME_PROMPT';
+
+const QuestionCard = require('./QuestionCard.json');
+const questionCard = CardFactory.adaptiveCard(QuestionCard);
 
 const MAIN_WATERFALL_DIALOG = 'mainWaterfallDialog';
 
@@ -21,6 +26,8 @@ class MainDialog extends ComponentDialog {
         // This is a sample "book a flight" dialog.
         this.addDialog(new TextPrompt('TextPrompt'))
             .addDialog(bookingDialog)
+            .addDialog(new ChoicePrompt(CHOICE_PROMPT))
+            .addDialog(new TextPrompt(NAME_PROMPT))
             .addDialog(new WaterfallDialog(MAIN_WATERFALL_DIALOG, [
                 this.introStep.bind(this),
                 this.actStep.bind(this),
@@ -53,18 +60,10 @@ class MainDialog extends ComponentDialog {
      * Note that the sample LUIS model will only recognize Paris, Berlin, New York and London as airport cities.
      */
     async introStep(stepContext) {
-        if (!this.luisRecognizer.isConfigured) {
-            const messageText = 'NOTE: LUIS is not configured. To enable all capabilities, add `LuisAppId`, `LuisAPIKey` and `LuisAPIHostName` to the .env file.';
-            await stepContext.context.sendActivity(messageText, null, InputHints.IgnoringInput);
-            return await stepContext.next();
-        }
-
-        const welcomeCard = CardFactory.heroCard(
-            'Welcome to the Advising Helpdesk. How can we be of support?',
-            [],
-            ['Schedule an Appointment', 'Ask a Registration Question']
-        );
-        await stepContext.context.sendActivity({ attachments: [welcomeCard] });
+        await stepContext.context.sendActivity(`Sure thing! fill in the information below and I'll
+        send your question to our peer advisors. They'll respond as soon as possible!`);
+        await stepContext.context.sendActivity({ attachments: [questionCard] });
+        return await stepContext.prompt(NAME_PROMPT, '');
     }
 
     /**
@@ -72,70 +71,10 @@ class MainDialog extends ComponentDialog {
      * Then, it hands off to the bookingDialog child dialog to collect any remaining details.
      */
     async actStep(stepContext) {
-        const bookingDetails = {};
-
-        if (!this.luisRecognizer.isConfigured) {
-            // LUIS is not configured, we just run the BookingDialog path.
-            return await stepContext.beginDialog('bookingDialog', bookingDetails);
-        }
-
-        // Call LUIS and gather any potential booking details. (Note the TurnContext has the response to the prompt)
-        const luisResult = await this.luisRecognizer.executeLuisQuery(stepContext.context);
-        switch (LuisRecognizer.topIntent(luisResult)) {
-        case 'BookFlight': {
-            // Extract the values for the composite entities from the LUIS result.
-            const fromEntities = this.luisRecognizer.getFromEntities(luisResult);
-            const toEntities = this.luisRecognizer.getToEntities(luisResult);
-
-            // Show a warning for Origin and Destination if we can't resolve them.
-            await this.showWarningForUnsupportedCities(stepContext.context, fromEntities, toEntities);
-
-            // Initialize BookingDetails with any entities we may have found in the response.
-            bookingDetails.destination = toEntities.airport;
-            bookingDetails.origin = fromEntities.airport;
-            bookingDetails.travelDate = this.luisRecognizer.getTravelDate(luisResult);
-            console.log('LUIS extracted these booking details:', JSON.stringify(bookingDetails));
-
-            // Run the BookingDialog passing in whatever details we have from the LUIS call, it will fill out the remainder.
-            return await stepContext.beginDialog('bookingDialog', bookingDetails);
-        }
-
-        case 'GetWeather': {
-            // We haven't implemented the GetWeatherDialog so we just display a TODO message.
-            const getWeatherMessageText = 'TODO: get weather flow here';
-            await stepContext.context.sendActivity(getWeatherMessageText, getWeatherMessageText, InputHints.IgnoringInput);
-            break;
-        }
-
-        default: {
-            // Catch all for unhandled intents
-            const didntUnderstandMessageText = `Sorry, I didn't get that. Please try asking in a different way (intent was ${ LuisRecognizer.topIntent(luisResult) })`;
-            await stepContext.context.sendActivity(didntUnderstandMessageText, didntUnderstandMessageText, InputHints.IgnoringInput);
-        }
-        }
-
-        return await stepContext.next();
-    }
-
-    /**
-     * Shows a warning if the requested From or To cities are recognized as entities but they are not in the Airport entity list.
-     * In some cases LUIS will recognize the From and To composite entities as a valid cities but the From and To Airport values
-     * will be empty if those entity values can't be mapped to a canonical item in the Airport.
-     */
-    async showWarningForUnsupportedCities(context, fromEntities, toEntities) {
-        const unsupportedCities = [];
-        if (fromEntities.from && !fromEntities.airport) {
-            unsupportedCities.push(fromEntities.from);
-        }
-
-        if (toEntities.to && !toEntities.airport) {
-            unsupportedCities.push(toEntities.to);
-        }
-
-        if (unsupportedCities.length) {
-            const messageText = `Sorry but the following airports are not supported: ${ unsupportedCities.join(', ') }`;
-            await context.sendActivity(messageText, messageText, InputHints.IgnoringInput);
-        }
+        const jsonResponse = JSON.parse(stepContext.result);
+        const studentQuestion = jsonResponse.StudentQuestion;
+        await stepContext.context.sendActivity(`You said ${ studentQuestion }`);
+        return await stepContext.prompt(NAME_PROMPT, 'Please enter your name.');
     }
 
     /**

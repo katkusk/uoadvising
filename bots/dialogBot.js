@@ -23,7 +23,10 @@ class DialogBot extends ActivityHandler {
 
         this.onMessage(async (context, next) => {
             console.log('Running dialog with Message Activity.');
-
+            const activity = context.activity;
+            if (!activity.text && activity.value) {
+                activity.text = JSON.stringify(activity.value);
+            }
             // Run the Dialog with the new message Activity.
             await this.dialog.run(context, this.dialogState);
 
